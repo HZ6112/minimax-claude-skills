@@ -1,3 +1,4 @@
 # Data files (personal listening history)
 */data/*.json
 __pycache__/
+buddy-sings/voices/
