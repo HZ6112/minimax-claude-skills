@@ -6,6 +6,10 @@ description: >
   playlist", "make a playlist", "歌单", "推荐歌单", "根据我的口味生成", "personalized
   playlist", "music taste", "音乐画像", "scan my music", "扫描我的音乐",
   "playlist based on my taste", "根据喜好生成".
+license: MIT
+metadata:
+  version: "1.0"
+  category: music
 ---
 
 # MiniMax Music Playlist — Personalized Playlist Generator
