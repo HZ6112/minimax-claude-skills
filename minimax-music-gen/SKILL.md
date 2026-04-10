@@ -9,10 +9,6 @@ description: >
   music. Even casual requests like "给我来点音乐" or "I want a chill beat" should trigger
   this skill. Do NOT use for music playback of existing files, music theory questions, or
   music recommendation without generation.
-license: MIT
-metadata:
-  version: "1.0"
-  category: music
 ---
 
 # MiniMax Music Generation Skill
@@ -62,7 +58,7 @@ This skill uses two MiniMax API endpoints in a pipeline:
    - Base URL: `https://api.minimax.io` (overseas) or `https://api.minimaxi.com` (domestic)
    - Scripts auto-detect the correct domain based on the user's API key
    - Generates the actual audio (MP3) from a prompt + optional lyrics
-   - Model: `music-2.6`
+   - Model: `music-2.6-free` (fallback: `music-2.6`), cover: `music-cover-free` (fallback: `music-cover`)
    - Supports: `is_instrumental` (true/false), `bedrock_lane: cover` header
    - Script: `scripts/generate_music.py`
 
@@ -165,7 +161,7 @@ infer instrumental + basic mode and proceed.
      --lang $LANG \
      --output /tmp/lyrics_draft.txt
    ```
-   The API endpoint is `https://api.minimax.io/v1/lyrics_generation` with mode
+   The API endpoint is `/v1/lyrics_generation` (domain auto-detected) with mode
    `write_full_song`. The prompt should be a vivid description of the song's theme,
    mood, and story — written in the **target lyrics language**.
    

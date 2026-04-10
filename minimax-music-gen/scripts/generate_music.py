@@ -42,6 +42,12 @@ from api_base import get_api_base
 
 LANG = "zh"  # Module-level default, updated by main()
 
+# Fallback models: if *-free models are retired, auto-downgrade
+MODEL_FALLBACKS = {
+    "music-2.6-free": "music-2.6",
+    "music-cover-free": "music-cover",
+}
+
 
 def get_env(name, alt_name=None, required=True):
     """Get environment variable with optional fallback to ~/.minimax_* files."""
@@ -99,7 +105,11 @@ def build_request_body(args):
 
 
 def submit_generation(url, api_key, body, is_cover=False):
-    """Submit the music generation request (synchronous)."""
+    """Submit the music generation request (synchronous).
+
+    Returns (result_dict, error_string). On success error is None.
+    On failure result may be None and error describes what happened.
+    """
     headers = {
         "Content-Type": "application/json",
         "Authorization": f"Bearer {api_key}",
@@ -113,15 +123,12 @@ def submit_generation(url, api_key, body, is_cover=False):
     try:
         with urllib.request.urlopen(req, timeout=300) as resp:
             result = json.loads(resp.read().decode("utf-8"))
-            return result
+            return result, None
     except urllib.error.HTTPError as e:
         error_body = e.read().decode("utf-8", errors="replace")
-        print(msg("api_request_failed", LANG, code=e.code))
-        print(msg("api_response", LANG, body=error_body[:500]))
-        sys.exit(1)
+        return None, f"HTTP {e.code}: {error_body[:500]}"
     except urllib.error.URLError as e:
-        print(msg("network_error", LANG, reason=e.reason))
-        sys.exit(1)
+        return None, f"Network error: {e.reason}"
 
 
 def save_hex_audio(hex_data, output_path):
@@ -184,7 +191,23 @@ def main():
     # Submit request (synchronous — waits for full generation)
     print(msg("submitting_request", LANG))
     start_time = time.time()
-    result = submit_generation(url, api_key, body, is_cover=args.cover)
+    result, error = submit_generation(url, api_key, body, is_cover=args.cover)
+
+    # Fallback: if primary model fails, try backup model
+    current_model = body["model"]
+    if (error or (result and result.get("base_resp", {}).get("status_code", 0) != 0)) \
+            and current_model in MODEL_FALLBACKS:
+        fallback_model = MODEL_FALLBACKS[current_model]
+        err_detail = error or result.get("base_resp", {}).get("status_msg", "unknown")
+        print(f"⚠️  模型 {current_model} 失败 ({err_detail})，切换到 {fallback_model} 重试...")
+        body["model"] = fallback_model
+        model_display = fallback_model
+        result, error = submit_generation(url, api_key, body, is_cover=args.cover)
+
+    if error:
+        print(f"❌ {error}")
+        sys.exit(1)
+
     elapsed = time.time() - start_time
 
     print(f"📋 API response: {json.dumps(result, ensure_ascii=False, indent=2)[:2000]}", file=sys.stderr)
